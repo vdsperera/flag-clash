@@ -679,8 +679,8 @@
   const PLATFORM_FEE_PCT = 5;  
   
   // REPLACE THESE AFTER DEPLOYMENT
-  const USDT_ADDRESS = "0x0000000000000000000000000000000000000000";
-  const FLAG_CLASH_ADDRESS = "0x0000000000000000000000000000000000000000";
+  const USDT_ADDRESS = "0xc8B4d0e3E9fdC826b793e8418c222bde2d27B5dB";
+  const FLAG_CLASH_ADDRESS = "0xDDFbE27A2f8527105EC347eD00b6f319057b13f5";
 
   const usdtAbi = [
     "function balanceOf(address owner) view returns (uint256)",
@@ -690,21 +690,25 @@
   ];
 
   const flagClashAbi = [
-    "function backTeam(uint8 team, uint256 amount)",
-    "function declareWinner(uint8 team)",
-    "function claimPrize()",
-    "function getMatchState() view returns (uint8 state, uint8 winner, uint256 sIndia, uint256 sSL, uint256 poolIndia, uint256 poolSL, bool claimed)",
-    "function getUserBacking(address user) view returns (uint256 indiaBacking, uint256 slBacking)",
+    "function currentMatchId() view returns (uint256)",
+    "function startNewMatch()",
+    "function backTeam(uint256 matchId, uint8 team, uint256 amount)",
+    "function declareWinner(uint256 matchId, uint8 team)",
+    "function claimPrize(uint256 matchId)",
+    "function getMatchState(uint256 matchId) view returns (uint8 state, uint8 winner, uint256 sIndia, uint256 sSL, uint256 poolIndia, uint256 poolSL, bool claimed)",
+    "function getUserBacking(uint256 matchId, address user) view returns (uint256 indiaBacking, uint256 slBacking)",
     "function POINT_COST() view returns (uint256)",
-    "event TeamBacked(address indexed user, uint8 team, uint256 amount, uint256 pointsScored)",
-    "event WinnerDeclared(uint8 winningTeam, uint256 totalPool, uint256 netPrizePool)",
-    "event PrizeClaimed(address indexed user, uint256 amount)"
+    "event MatchStarted(uint256 indexed matchId)",
+    "event TeamBacked(uint256 indexed matchId, address indexed user, uint8 team, uint256 amount, uint256 pointsScored)",
+    "event WinnerDeclared(uint256 indexed matchId, uint8 winningTeam, uint256 totalPool, uint256 netPrizePool)",
+    "event PrizeClaimed(uint256 indexed matchId, address indexed user, uint256 amount)"
   ];
 
   let provider;
   let signer;
   let usdtContract;
   let flagClashContract;
+  let currentMatchId = 1n;
 
   let score = { india: 0, sl: 0 };
   let selected = null;
@@ -815,14 +819,15 @@
   async function fetchStateFromChain() {
       if (!flagClashContract || !connectedAccount) return;
       try {
-          const state = await flagClashContract.getMatchState();
+          currentMatchId = await flagClashContract.currentMatchId();
+          const state = await flagClashContract.getMatchState(currentMatchId);
           // state is: state, winner, sIndia, sSL, poolIndia, poolSL, claimed
           matchWinner = state[0] === 1n ? (state[1] === 0n ? 'india' : 'sl') : null;
           score.india = Number(state[2]);
           score.sl = Number(state[3]);
           payoutClaimed = state[6];
 
-          const backing = await flagClashContract.getUserBacking(connectedAccount);
+          const backing = await flagClashContract.getUserBacking(currentMatchId, connectedAccount);
           userIndiaSpend = Number(ethers.formatUnits(backing[0], 6));
           userSLSpend = Number(ethers.formatUnits(backing[1], 6));
 
@@ -994,7 +999,7 @@
         }
 
         el.diffReadout.textContent = "Backing team on-chain...";
-        const tx = await flagClashContract.backTeam(teamId, amountWei);
+        const tx = await flagClashContract.backTeam(currentMatchId, teamId, amountWei);
         await tx.wait();
 
         // Let the event listener update the score, but we can do optimisitic UI
@@ -1026,7 +1031,7 @@
     try {
         el.claimPrizeBtn.disabled = true;
         el.claimPrizeBtn.textContent = "Claiming...";
-        const tx = await flagClashContract.claimPrize();
+        const tx = await flagClashContract.claimPrize(currentMatchId);
         await tx.wait();
 
         playTone(1000, 'triangle', 0.4, 0.1);
@@ -1113,12 +1118,15 @@
         await fetchStateFromChain();
 
         // Listen for events
-        flagClashContract.on("TeamBacked", (user, team, amount, pointsScored) => {
+        flagClashContract.on("TeamBacked", (matchId, user, team, amount, pointsScored) => {
             fetchStateFromChain();
         });
-        flagClashContract.on("WinnerDeclared", (winningTeam) => {
+        flagClashContract.on("WinnerDeclared", (matchId, winningTeam) => {
             fetchStateFromChain();
             playTone(900, 'sine', 0.4, 0.1);
+        });
+        flagClashContract.on("MatchStarted", (matchId) => {
+            fetchStateFromChain();
         });
 
       } catch(err) {
@@ -1286,11 +1294,11 @@
   
   el.declareIndiaBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
-    if(flagClashContract) await flagClashContract.declareWinner(0);
+    if(flagClashContract) await flagClashContract.declareWinner(currentMatchId, 0);
   });
   el.declareSLBtn.addEventListener('click', async (e) => {
     e.stopPropagation();
-    if(flagClashContract) await flagClashContract.declareWinner(1);
+    if(flagClashContract) await flagClashContract.declareWinner(currentMatchId, 1);
   });
   el.disconnectBtn.addEventListener('click', (e) => {
     e.stopPropagation();
