@@ -1,0 +1,1328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Flag Clash — Web3 Flag Battle, Central Treasury & Prize Pool</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Support your national flag in a live visual clash. Top up USDT to central treasury vault and win prize pool distributions.">
+<style>
+  :root{
+    --bg-0:#090b10;
+    --bg-1:#121622;
+    --card-bg:rgba(20,25,38,0.78);
+    --border-color:rgba(255,255,255,0.08);
+    --ink-0:#f0f3f9;
+    --ink-1:#9ea7ba;
+    --ink-2:#626b7d;
+    --gold:#e6c65c;
+    --gold-glow:rgba(230,198,92,0.35);
+    --line:#222838;
+    --india:#ff9933;
+    --india-2:#138808;
+    --sl:#8d1b3d;
+    --sl-2:#ffb703;
+    --accent-blue:#3b82f6;
+    --accent-blue-hover:#2563eb;
+    --accent-green:#10b981;
+    --accent-purple:#8b5cf6;
+  }
+  *{box-sizing:border-box;}
+  html,body{
+    margin:0; height:100%;
+    background:
+      radial-gradient(1400px 800px at 50% -10%, #1a2235 0%, var(--bg-0) 70%);
+    color:var(--ink-0);
+    font-family:'Segoe UI', system-ui, -apple-system, sans-serif;
+    overflow-x:hidden;
+    overflow-y:auto;
+    -webkit-user-select:none; user-select:none;
+  }
+  .wrap{
+    min-height:100%;
+    display:flex; flex-direction:column; align-items:center;
+    padding:20px 16px 28px;
+    cursor: pointer;
+  }
+
+  /* ---- Header & Wallet Bar ---- */
+  .top-nav{
+    width:100%; max-width:680px;
+    display:flex; flex-direction:column; gap:8px; margin-bottom:12px;
+  }
+  .wallet-bar{
+    width:100%;
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px; flex-wrap:wrap;
+    background:var(--card-bg);
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border:1px solid var(--border-color); border-radius:14px;
+    padding:10px 16px;
+    box-shadow:0 8px 32px rgba(0,0,0,0.4);
+  }
+  .wallet-left{display:flex; align-items:center; gap:12px;}
+  .wallet-icon{
+    width:34px; height:34px; border-radius:50%;
+    background:radial-gradient(circle at 35% 30%, #3b82f6, #1d4ed8);
+    display:flex; align-items:center; justify-content:center;
+    font-size:15px; font-weight:800; color:#fff;
+    box-shadow:0 0 12px rgba(59,130,246,0.4);
+    flex:none;
+  }
+  .wallet-info{display:flex; flex-direction:column;}
+  .wallet-title-row{display:flex; align-items:center; gap:8px;}
+  .wallet-text .label{
+    font-size:10px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-1); font-weight:600;
+  }
+  .net-badge{
+    font-size:9.5px; font-weight:600; color:var(--accent-green);
+    background:rgba(16,185,129,0.12); border:1px solid rgba(16,185,129,0.3);
+    border-radius:12px; padding:1px 7px; display:inline-flex; align-items:center; gap:4px;
+  }
+  .net-badge .net-dot{
+    width:6px; height:6px; border-radius:50%; background:var(--accent-green);
+    box-shadow:0 0 6px var(--accent-green);
+  }
+  .wallet-text .balance{
+    font-family:'Courier New', monospace; font-size:18px; font-weight:800;
+    color:#8fd3ff; display:flex; align-items:center; gap:6px;
+  }
+  .wallet-text .balance.low{color:#ff7a7a;}
+  .connected-addr{
+    font-size:11px; font-family:'Courier New', monospace; color:var(--ink-1);
+    background:rgba(255,255,255,0.05); border-radius:4px; padding:1px 5px;
+    cursor:pointer; transition:color .2s, background .2s;
+  }
+  .connected-addr:hover{color:var(--gold); background:rgba(212,175,55,0.15);}
+
+  .wallet-actions{display:flex; align-items:center; gap:8px;}
+  .btn-primary{
+    background:linear-gradient(180deg,#3b82f6,#1d4ed8);
+    color:#fff; border:none; padding:8px 16px; border-radius:20px;
+    font-size:12.5px; font-weight:700; cursor:pointer; letter-spacing:.03em;
+    box-shadow:0 4px 14px rgba(59,130,246,0.35);
+    transition:transform .15s ease, filter .15s ease, box-shadow .15s ease;
+  }
+  .btn-primary:hover{filter:brightness(1.1); transform:translateY(-1px); box-shadow:0 6px 18px rgba(59,130,246,0.45);}
+  .btn-primary:active{transform:translateY(0);}
+  .btn-secondary{
+    background:rgba(255,255,255,0.06); border:1px solid var(--line); color:var(--ink-0);
+    padding:8px 14px; border-radius:20px; font-size:12px; font-weight:600; cursor:pointer;
+    transition:background .2s, border-color .2s;
+  }
+  .btn-secondary:hover{background:rgba(255,255,255,0.12); border-color:#3a4155;}
+  
+  .btn-primary.pulse{animation:pulse 1s ease-in-out 2;}
+  @keyframes pulse{
+    0%,100%{box-shadow:0 4px 14px rgba(59,130,246,0.35);}
+    50%{box-shadow:0 4px 22px rgba(255,122,122,0.75);}
+  }
+
+  .treasury-note{
+    font-size:10.5px; color:var(--ink-1); text-align:center;
+    display:flex; align-items:center; justify-content:center; gap:6px; flex-wrap:wrap;
+  }
+  .treasury-addr-tag{
+    font-family:'Courier New', monospace; font-size:10px; color:var(--gold);
+    background:rgba(230,198,92,0.12); border:1px solid rgba(230,198,92,0.25);
+    padding:1px 6px; border-radius:4px; cursor:pointer;
+  }
+
+  /* ---- Prize Pool Dashboard Widget ---- */
+  .pool-dashboard{
+    width:100%; max-width:680px;
+    background:linear-gradient(180deg, rgba(30,37,56,0.85), rgba(18,23,36,0.85));
+    backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px);
+    border:1px solid rgba(230,198,92,0.25); border-radius:14px;
+    padding:14px 18px; margin-bottom:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.45);
+  }
+  .pool-header{
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:8px;
+    flex-wrap:wrap; gap:8px;
+  }
+  .pool-title{
+    font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--gold); font-weight:700;
+    display:flex; align-items:center; gap:6px;
+  }
+  .pool-total-val{
+    font-family:'Courier New', monospace; font-size:22px; font-weight:800; color:#fff;
+    text-shadow:0 0 10px rgba(255,255,255,0.2);
+  }
+  .fee-tag{
+    font-size:9.5px; color:var(--ink-1); background:rgba(255,255,255,0.06);
+    border-radius:10px; padding:2px 8px; border:1px solid var(--line);
+  }
+
+  .pool-bar-wrap{
+    width:100%; height:12px; background:#10131d; border-radius:6px; overflow:hidden;
+    display:flex; margin-bottom:10px; border:1px solid var(--line);
+  }
+  .pool-bar-india{background:linear-gradient(90deg, #ff9933, #e67300); height:100%; transition:width .3s ease;}
+  .pool-bar-sl{background:linear-gradient(90deg, #b32400, #ffb703); height:100%; transition:width .3s ease;}
+
+  .odds-grid{
+    display:grid; grid-template-columns:repeat(2, 1fr); gap:10px; text-align:center;
+  }
+  .odds-card{
+    background:rgba(0,0,0,0.2); border:1px solid var(--line); border-radius:8px; padding:8px;
+  }
+  .odds-card.india{border-left:3px solid var(--india);}
+  .odds-card.sl{border-left:3px solid var(--sl-2);}
+  .odds-card .team-name{font-size:10.5px; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--ink-1);}
+  .odds-card .multiplier{font-family:'Courier New', monospace; font-size:16px; font-weight:800; color:var(--gold);}
+  .odds-card .user-payout{font-size:10px; color:var(--accent-green); margin-top:2px; font-weight:600;}
+
+  /* ---- Winner Banner ---- */
+  .winner-banner{
+    width:100%; max-width:680px;
+    background:linear-gradient(180deg, rgba(16,185,129,0.25), rgba(16,185,129,0.08));
+    border:2px solid var(--accent-green); border-radius:14px;
+    padding:16px; margin-bottom:14px; text-align:center;
+    box-shadow:0 0 30px rgba(16,185,129,0.3); display:none;
+    animation:bannerGlow 2s infinite alternate;
+  }
+  @keyframes bannerGlow{
+    0%{box-shadow:0 0 15px rgba(16,185,129,0.2);}
+    100%{box-shadow:0 0 35px rgba(16,185,129,0.5);}
+  }
+  .winner-banner h2{margin:0 0 4px; font-size:20px; color:#fff;}
+  .winner-banner .claim-desc{font-size:12px; color:var(--ink-0); margin-bottom:10px;}
+  .btn-claim{
+    background:linear-gradient(180deg, #10b981, #047857); color:#fff; border:none;
+    padding:10px 24px; border-radius:20px; font-size:14px; font-weight:800;
+    cursor:pointer; box-shadow:0 4px 20px rgba(16,185,129,0.4);
+    transition:transform .15s ease, filter .15s ease;
+  }
+  .btn-claim:hover{filter:brightness(1.12); transform:scale(1.03);}
+
+  /* ---- Scoreboard ---- */
+  .board{
+    display:flex; align-items:stretch; gap:0;
+    border:1px solid var(--border-color);
+    border-radius:14px; overflow:hidden;
+    background:linear-gradient(180deg,#161a26,#10131d);
+    box-shadow:0 12px 36px rgba(0,0,0,0.5);
+  }
+  .side{
+    width:160px; padding:14px 18px; text-align:center;
+    position:relative; cursor:pointer;
+    transition:background .25s ease, transform .15s ease;
+  }
+  .side:hover{background:rgba(255,255,255,0.02);}
+  .side .flag-label{
+    font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--ink-1); font-weight:700;
+  }
+  .side .count{
+    font-family:'Courier New', monospace;
+    font-size:42px; font-weight:800; line-height:1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .side.india .count{color:var(--india);}
+  .side.sl .count{color:var(--sl-2);}
+  .side.selected{background:rgba(230,198,92,0.12); box-shadow:inset 0 0 15px rgba(230,198,92,0.15);}
+  .side.selected .flag-label{color:var(--gold);}
+  .vs{
+    width:56px; display:flex; align-items:center; justify-content:center;
+    font-weight:900; font-size:14px; color:var(--gold);
+    border-left:1px solid var(--line); border-right:1px solid var(--line);
+    background:#0d1017; letter-spacing:.05em;
+  }
+  .lead-tag{
+    position:absolute; bottom:4px; left:50%; transform:translateX(-50%);
+    font-size:9px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--gold); opacity:0; transition:opacity .2s; font-weight:700;
+  }
+  .side.leading .lead-tag{opacity:1;}
+
+  /* ---- Instructions ---- */
+  .hint{
+    margin-top:14px; font-size:12.5px; color:var(--ink-1);
+    text-align:center; max-width:540px; line-height:1.6;
+  }
+  .hint kbd{
+    background:#1c2130; border:1px solid var(--line); border-bottom-width:2px;
+    border-radius:4px; padding:2px 7px; font-family:'Courier New',monospace;
+    color:var(--ink-0); font-size:11.5px;
+  }
+
+  /* ---- Stage ---- */
+  .stage{
+    flex:1; width:100%; max-width:640px;
+    display:flex; align-items:center; justify-content:center;
+    position:relative; margin-top:18px; margin-bottom:10px;
+  }
+  .flag-stack{
+    position:relative;
+    width:min(82vw, 440px);
+    aspect-ratio: 3 / 2;
+    filter:drop-shadow(0 25px 45px rgba(0,0,0,0.65));
+  }
+  .flag{
+    position:absolute; inset:0;
+    border-radius:6px; overflow:hidden;
+    outline:2px solid rgba(255,255,255,0.08);
+    transition: opacity .35s ease, filter .35s ease, transform .35s ease;
+    transform-origin:center center;
+    will-change:opacity, transform;
+  }
+  .flag svg{width:100%; height:100%; display:block;}
+  .flag.pickable{cursor:pointer;}
+  .flag .pick-ring{
+    position:absolute; inset:-6px; border-radius:10px;
+    border:2.5px solid var(--gold); opacity:0; pointer-events:none;
+    transition:opacity .2s, box-shadow .2s;
+    box-shadow:0 0 15px var(--gold-glow);
+  }
+  .flag.is-selected .pick-ring{opacity:1;}
+  .flag.is-selected{filter: saturate(1.2) brightness(1.05);}
+  .flag.click-bounce{animation:clickBounce 0.25s ease;}
+  @keyframes clickBounce{
+    0%{transform:scale(1);}
+    50%{transform:scale(1.03);}
+    100%{transform:scale(1);}
+  }
+
+  /* seam glow indicating pull direction */
+  .seam{
+    position:absolute; left:50%; top:-16px; bottom:-16px; width:4px;
+    transform:translateX(-50%);
+    background:linear-gradient(180deg, transparent, var(--gold), transparent);
+    opacity:.65; border-radius:2px;
+    box-shadow:0 0 12px var(--gold);
+    transition:left .35s ease; z-index:10; pointer-events:none;
+  }
+
+  .diff-readout{
+    margin-top:8px; font-size:12px; color:var(--ink-1);
+    font-family:'Courier New', monospace; font-weight:600;
+  }
+
+  .reset-row{margin-top:16px; display:flex; gap:10px; flex-wrap:wrap; justify-content:center;}
+  .reset-btn{
+    background:#161a24; border:1px solid var(--line); color:var(--ink-1);
+    padding:6px 14px; border-radius:20px; font-size:11.5px; cursor:pointer;
+    letter-spacing:.03em; transition:color .2s, border-color .2s, background .2s;
+  }
+  .reset-btn:hover{color:var(--ink-0); border-color:#3a4155; background:#1e2332;}
+
+  /* ---- Modal Base ---- */
+  .modal-backdrop{
+    position:fixed; inset:0; background:rgba(4,5,8,0.78);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    display:flex; align-items:center; justify-content:center;
+    z-index:100; opacity:0; pointer-events:none; transition:opacity .25s ease;
+  }
+  .modal-backdrop.open{opacity:1; pointer-events:auto;}
+  .modal{
+    width:min(92vw, 420px);
+    background:linear-gradient(180deg,#181d2a,#111520);
+    border:1px solid var(--border-color); border-radius:18px;
+    padding:24px; text-align:center;
+    box-shadow:0 24px 70px rgba(0,0,0,0.7);
+    transform:scale(0.95); transition:transform .25s ease;
+  }
+  .modal-backdrop.open .modal{transform:scale(1);}
+  .modal h3{margin:8px 0 4px; font-size:18px; font-weight:700;}
+  .modal .sub{font-size:12px; color:var(--ink-1); margin-bottom:18px; line-height:1.5;}
+
+  /* ---- Wallet Option Grid ---- */
+  .wallet-grid{
+    display:flex; flex-direction:column; gap:10px; margin-bottom:16px; text-align:left;
+  }
+  .wallet-opt{
+    display:flex; align-items:center; justify-content:space-between;
+    background:#1c2232; border:1px solid var(--line); border-radius:12px;
+    padding:12px 14px; cursor:pointer; transition:all .2s ease;
+  }
+  .wallet-opt:hover{border-color:var(--accent-blue); background:#222a3d; transform:translateX(2px);}
+  .wallet-opt-left{display:flex; align-items:center; gap:12px;}
+  .wallet-opt-icon{
+    width:32px; height:32px; border-radius:8px; display:flex; align-items:center; justify-content:center;
+    font-size:16px; font-weight:700; background:rgba(255,255,255,0.08); flex:none;
+  }
+  .wallet-opt-name{font-size:13.5px; font-weight:700; color:var(--ink-0);}
+  .wallet-opt-desc{font-size:10.5px; color:var(--ink-1);}
+  .wallet-opt-badge{
+    font-size:9px; text-transform:uppercase; letter-spacing:.05em; padding:2px 6px; border-radius:4px;
+    background:rgba(59,130,246,0.15); color:var(--accent-blue); font-weight:700;
+  }
+
+  /* ---- Amount Selector & Input ---- */
+  .amount-grid{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:12px;
+  }
+  .amount-btn{
+    background:#1c2130; border:1px solid var(--line); color:var(--ink-0);
+    padding:10px 4px; border-radius:10px; font-size:14px; font-weight:700;
+    cursor:pointer; font-family:'Courier New', monospace; transition:all .2s;
+  }
+  .amount-btn:hover, .amount-btn.active{border-color:var(--accent-blue); color:var(--accent-blue); background:rgba(59,130,246,0.1);}
+  .amount-btn:disabled{opacity:.4; cursor:default;}
+
+  .custom-amt-wrap{
+    display:flex; align-items:center; gap:8px; margin-bottom:16px;
+    background:#161a26; border:1px solid var(--line); border-radius:10px; padding:6px 12px;
+  }
+  .custom-amt-wrap label{font-size:11px; color:var(--ink-1); font-weight:600;}
+  .custom-amt-input{
+    flex:1; background:none; border:none; color:var(--ink-0);
+    font-family:'Courier New', monospace; font-size:15px; font-weight:700; outline:none;
+  }
+  .custom-amt-input::placeholder{color:var(--ink-2);}
+
+  /* ---- Transaction Status Box ---- */
+  .tx-status-box{
+    background:rgba(0,0,0,0.25); border:1px solid var(--line); border-radius:10px;
+    padding:12px; margin-bottom:16px; font-size:12px; color:var(--ink-1);
+    font-family:'Courier New', monospace; min-height:50px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px;
+  }
+  .tx-spinner{
+    width:24px; height:24px; border-radius:50%;
+    border:2.5px solid #262c3c; border-top-color:var(--accent-blue);
+    animation:spin .8s linear infinite;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  .tx-hash-link{
+    font-size:10px; color:var(--accent-blue); text-decoration:none; word-break:break-all;
+  }
+  .tx-hash-link:hover{text-decoration:underline;}
+
+  /* ---- History Modal List ---- */
+  .history-list{
+    max-height:240px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;
+    margin-bottom:14px; padding-right:4px; text-align:left;
+  }
+  .history-item{
+    display:flex; align-items:center; justify-content:space-between;
+    background:#161a26; border:1px solid var(--line); border-radius:8px;
+    padding:8px 12px; font-size:11.5px;
+  }
+  .history-item.topup .amt{color:var(--accent-green); font-weight:700;}
+  .history-item.payout .amt{color:var(--gold); font-weight:800;}
+  .history-item.spend .amt{color:var(--ink-1);}
+  .history-meta{display:flex; flex-direction:column;}
+  .history-title{font-weight:600; color:var(--ink-0);}
+  .history-time{font-size:9.5px; color:var(--ink-2);}
+
+  .modal-close{
+    background:none; border:none; color:var(--ink-1);
+    font-size:12px; cursor:pointer; text-decoration:underline; margin-top:6px;
+  }
+  .modal-close:hover{color:var(--ink-0);}
+
+  @media (max-width:540px){
+    .side{width:125px; padding:10px 10px;}
+    .side .count{font-size:32px;}
+    .wallet-bar{flex-direction:column; align-items:stretch;}
+    .wallet-actions{justify-content:stretch;}
+    .wallet-actions button{flex:1;}
+  }
+</style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.13.4/ethers.umd.min.js"></script>
+</head>
+<body>
+
+<div class="wrap" id="clickZone">
+
+  <!-- Top Nav / Wallet Bar -->
+  <div class="top-nav" id="topNav">
+    <div class="wallet-bar">
+      <div class="wallet-left">
+        <div class="wallet-icon" id="walletIcon">$</div>
+        <div class="wallet-info">
+          <div class="wallet-title-row">
+            <span class="label" id="walletLabel">Demo Wallet</span>
+            <span class="net-badge" id="netBadge"><span class="net-dot"></span> Ethereum</span>
+          </div>
+          <div class="wallet-text">
+            <div class="balance" id="walletBalance">0.00 USDT</div>
+          </div>
+          <div class="connected-addr" id="connectedAddr" title="Click to copy address">Not Connected</div>
+        </div>
+      </div>
+      <div class="wallet-actions">
+        <button class="btn-secondary" id="connectWalletBtn">Connect Wallet</button>
+        <button class="btn-primary" id="topupBtn">Get Test USDT</button>
+        <button class="btn-secondary" id="historyBtn" title="View Transaction History">History</button>
+      </div>
+    </div>
+    
+    <div class="treasury-note">
+      <span>Top-ups deposit to Central Treasury Vault:</span>
+      <span class="treasury-addr-tag" id="treasuryAddrTag" title="Click to copy Treasury Vault Address">0x71C39B42...8888</span>
+    </div>
+  </div>
+
+  <!-- Prize Pool Dashboard -->
+  <div class="pool-dashboard" id="poolDashboard">
+    <div class="pool-header">
+      <div class="pool-title">🏆 Central Match Prize Pool</div>
+      <div class="pool-total-val" id="poolTotalVal">0.00 USDT</div>
+      <span class="fee-tag">5% Platform Fee</span>
+    </div>
+    
+    <div class="pool-bar-wrap">
+      <div class="pool-bar-india" id="poolBarIndia" style="width:50%;"></div>
+      <div class="pool-bar-sl" id="poolBarSL" style="width:50%;"></div>
+    </div>
+
+    <div class="odds-grid">
+      <div class="odds-card india">
+        <div class="team-name">India Backing Pool</div>
+        <div class="multiplier" id="indiaMultiplier">1.90x Win Odds</div>
+        <div class="user-payout" id="indiaUserPayout">Your Est: 0.00 USDT</div>
+      </div>
+      <div class="odds-card sl">
+        <div class="team-name">Sri Lanka Backing Pool</div>
+        <div class="multiplier" id="slMultiplier">1.90x Win Odds</div>
+        <div class="user-payout" id="slUserPayout">Your Est: 0.00 USDT</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Winner Banner (Triggered on Match Victory) -->
+  <div class="winner-banner" id="winnerBanner">
+    <h2 id="winnerTitle">🏆 Team Victory Declared!</h2>
+    <div class="claim-desc" id="winnerDesc">Winning team backers share the net prize pool pool!</div>
+    <button class="btn-claim" id="claimPrizeBtn">Claim Prize Payout</button>
+  </div>
+
+  <!-- Scoreboard -->
+  <div class="board" id="board">
+    <div class="side india" id="sideIndia">
+      <div class="flag-label">India</div>
+      <div class="count" id="countIndia">0</div>
+      <div class="lead-tag">Leading</div>
+    </div>
+    <div class="vs">VS</div>
+    <div class="side sl" id="sideSL">
+      <div class="flag-label">Sri Lanka</div>
+      <div class="count" id="countSL">0</div>
+      <div class="lead-tag">Leading</div>
+    </div>
+  </div>
+
+  <!-- Instructions -->
+  <div class="hint">
+    Press <kbd>Numpad 1</kbd> or click the India flag to back India &middot;
+    Press <kbd>Numpad 2</kbd> or click Sri Lanka flag to back Sri Lanka.<br>
+    Once a side is picked, click anywhere to score points. Lead of <b id="thresholdLabel">10</b> points wins the Prize Pool!
+  </div>
+
+  <!-- Flag Stage -->
+  <div class="stage">
+    <div class="flag-stack">
+      <div class="seam" id="seam"></div>
+
+      <!-- India Flag -->
+      <div class="flag pickable" id="flagIndia" data-side="india">
+        <div class="pick-ring"></div>
+        <svg viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg">
+          <rect width="900" height="600" fill="#ffffff"/>
+          <rect width="900" height="200" fill="#FF9933"/>
+          <rect y="400" width="900" height="200" fill="#138808"/>
+          <circle cx="450" cy="300" r="80" fill="none" stroke="#000080" stroke-width="4"/>
+          <g stroke="#000080" stroke-width="2">
+            <circle cx="450" cy="300" r="6" fill="#000080"/>
+            <g id="spokesIndia"></g>
+          </g>
+        </svg>
+      </div>
+
+      <!-- Sri Lanka Flag -->
+      <div class="flag pickable" id="flagSL" data-side="sl">
+        <div class="pick-ring"></div>
+        <svg viewBox="0 0 900 600" xmlns="http://www.w3.org/2000/svg">
+          <rect width="900" height="600" fill="#FFB703"/>
+          <rect x="0" width="130" height="600" fill="#00534E"/>
+          <rect x="130" width="130" height="600" fill="#FF8200"/>
+          <rect x="260" width="640" height="600" fill="#8D1B3D"/>
+          <rect x="260" width="640" height="600" fill="none" stroke="#FFB703" stroke-width="14"/>
+          <g transform="translate(580,300)">
+            <circle r="95" fill="#8D1B3D" stroke="#FFB703" stroke-width="6"/>
+            <path d="M0,-55 L14,-15 L58,-15 L24,10 L36,52 L0,26 L-36,52 L-24,10 L-58,-15 L-14,-15 Z" fill="#FFB703"/>
+            <rect x="-8" y="8" width="16" height="46" fill="#FFB703"/>
+            <circle cx="-40" cy="-70" r="7" fill="#FFB703"/>
+            <circle cx="40" cy="-70" r="7" fill="#FFB703"/>
+            <circle cx="-40" cy="70" r="7" fill="#FFB703"/>
+            <circle cx="40" cy="70" r="7" fill="#FFB703"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </div>
+
+  <div class="diff-readout" id="diffReadout">Pick a side to begin</div>
+
+  <div class="reset-row">
+    <button class="reset-btn" id="resetBtn">Reset scores</button>
+    <button class="reset-btn" id="resetWalletBtn">Reset wallet & pool</button>
+    <button class="reset-btn" id="declareIndiaBtn">Declare India Win</button>
+    <button class="reset-btn" id="declareSLBtn">Declare Sri Lanka Win</button>
+    <button class="reset-btn" id="disconnectBtn" style="display:none;">Disconnect wallet</button>
+  </div>
+</div>
+
+<!-- Modal 1: Connect Wallet Modal -->
+<div class="modal-backdrop" id="connectModalBackdrop">
+  <div class="modal">
+    <div class="wallet-icon" style="margin:0 auto 8px; width:38px; height:38px; font-size:18px;">🦊</div>
+    <h3>Connect Web3 Wallet</h3>
+    <div class="sub">Select a wallet to connect to Flag Clash and pay/top-up USDT on Ethereum.</div>
+    
+    <div class="wallet-grid">
+      <div class="wallet-opt" data-wallet="metamask">
+        <div class="wallet-opt-left">
+          <div class="wallet-opt-icon">🦊</div>
+          <div>
+            <div class="wallet-opt-name">MetaMask / Web3</div>
+            <div class="wallet-opt-desc" id="metamaskStatus">Injected browser extension</div>
+          </div>
+        </div>
+        <span class="wallet-opt-badge" id="metamaskBadge">Detected</span>
+      </div>
+
+      <div class="wallet-opt" data-wallet="coinbase">
+        <div class="wallet-opt-left">
+          <div class="wallet-opt-icon">🛡️</div>
+          <div>
+            <div class="wallet-opt-name">Coinbase Wallet</div>
+            <div class="wallet-opt-desc">Browser or mobile app</div>
+          </div>
+        </div>
+        <span class="wallet-opt-badge" style="background:rgba(255,255,255,0.08); color:var(--ink-1);">Web3</span>
+      </div>
+
+      <div class="wallet-opt" data-wallet="walletconnect">
+        <div class="wallet-opt-left">
+          <div class="wallet-opt-icon">🔗</div>
+          <div>
+            <div class="wallet-opt-name">WalletConnect</div>
+            <div class="wallet-opt-desc">Scan with mobile crypto wallet</div>
+          </div>
+        </div>
+        <span class="wallet-opt-badge" style="background:rgba(255,255,255,0.08); color:var(--ink-1);">QR Code</span>
+      </div>
+
+      <div class="wallet-opt" data-wallet="demo">
+        <div class="wallet-opt-left">
+          <div class="wallet-opt-icon">⚡</div>
+          <div>
+            <div class="wallet-opt-name">Instant Demo Wallet</div>
+            <div class="wallet-opt-desc">Test immediately without crypto extension</div>
+          </div>
+        </div>
+        <span class="wallet-opt-badge" style="background:rgba(16,185,129,0.15); color:var(--accent-green);">Instant</span>
+      </div>
+    </div>
+
+    <button class="modal-close" id="connectModalClose">Cancel</button>
+  </div>
+</div>
+
+<!-- Modal 2: Top Up Wallet Modal -->
+<div class="modal-backdrop" id="topupModalBackdrop">
+  <div class="modal">
+    <div class="wallet-icon" style="margin:0 auto 8px; width:38px; height:38px; font-size:18px;">💳</div>
+    <h3>Mint Test USDT (Faucet)</h3>
+    <div class="sub" id="topupSub">Mint up to 1000 Mock USDT for testing.</div>
+    
+    <!-- Amount Selection -->
+    
+
+    
+    <div class="custom-amt-wrap">
+      <label for="customAmountInput">USDT Amount:</label>
+      <input type="number" id="customAmountInput" class="custom-amt-input" value="1000" min="1" max="1000" step="1">
+    </div>
+
+
+    <!-- Status & Spinner -->
+    <div class="tx-status-box" id="txStatusBox">
+      <span id="txStatusText">Select an amount and confirm top-up via your connected wallet.</span>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-direction:column;">
+      <button class="btn-primary" id="confirmTopupBtn" style="width:100%; padding:12px; font-size:14px;">Mint Test USDT</button>
+      <button class="modal-close" id="topupModalClose">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal 3: Transaction History Modal -->
+<div class="modal-backdrop" id="historyModalBackdrop">
+  <div class="modal">
+    <div class="wallet-icon" style="margin:0 auto 8px; width:38px; height:38px; font-size:18px;">📜</div>
+    <h3>Transaction History</h3>
+    <div class="sub">Record of treasury deposits, spent points, and prize payouts.</div>
+
+    <div class="history-list" id="historyList">
+      <div style="text-align:center; color:var(--ink-2); font-size:12px; padding:20px;">No transactions recorded yet.</div>
+    </div>
+
+    <button class="modal-close" id="historyModalClose">Close</button>
+  </div>
+</div>
+
+<script>
+
+(function(){
+  const THRESHOLD = 10;           
+  const PLATFORM_FEE_PCT = 5;  
+  
+  // REPLACE THESE AFTER DEPLOYMENT
+  const USDT_ADDRESS = "0x0000000000000000000000000000000000000000";
+  const FLAG_CLASH_ADDRESS = "0x0000000000000000000000000000000000000000";
+
+  const usdtAbi = [
+    "function balanceOf(address owner) view returns (uint256)",
+    "function faucet(uint256 amount)",
+    "function approve(address spender, uint256 amount) returns (bool)",
+    "function allowance(address owner, address spender) view returns (uint256)"
+  ];
+
+  const flagClashAbi = [
+    "function backTeam(uint8 team, uint256 amount)",
+    "function declareWinner(uint8 team)",
+    "function claimPrize()",
+    "function getMatchState() view returns (uint8 state, uint8 winner, uint256 sIndia, uint256 sSL, uint256 poolIndia, uint256 poolSL, bool claimed)",
+    "function getUserBacking(address user) view returns (uint256 indiaBacking, uint256 slBacking)",
+    "function POINT_COST() view returns (uint256)",
+    "event TeamBacked(address indexed user, uint8 team, uint256 amount, uint256 pointsScored)",
+    "event WinnerDeclared(uint8 winningTeam, uint256 totalPool, uint256 netPrizePool)",
+    "event PrizeClaimed(address indexed user, uint256 amount)"
+  ];
+
+  let provider;
+  let signer;
+  let usdtContract;
+  let flagClashContract;
+
+  let score = { india: 0, sl: 0 };
+  let selected = null;
+  let wallet = 0.00;
+  let connectedAccount = null;
+  let transactions = [];
+  
+  let userIndiaSpend = 0.00;
+  let userSLSpend = 0.00;
+  let matchWinner = null; 
+  let payoutClaimed = false;
+
+  let isPendingTx = false;
+  let pointCost = 0.1; // fetched from contract
+
+  const audioCtx = (window.AudioContext || window.webkitAudioContext) ? new (window.AudioContext || window.webkitAudioContext)() : null;
+  function playTone(freq, type = 'sine', duration = 0.1, gainVal = 0.05) {
+    if (!audioCtx) return;
+    try {
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = type;
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(gainVal, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + duration);
+    } catch(e){}
+  }
+
+  const el = {
+    countIndia: document.getElementById('countIndia'),
+    countSL: document.getElementById('countSL'),
+    sideIndia: document.getElementById('sideIndia'),
+    sideSL: document.getElementById('sideSL'),
+    flagIndia: document.getElementById('flagIndia'),
+    flagSL: document.getElementById('flagSL'),
+    seam: document.getElementById('seam'),
+    diffReadout: document.getElementById('diffReadout'),
+    thresholdLabel: document.getElementById('thresholdLabel'),
+    resetBtn: document.getElementById('resetBtn'),
+    resetWalletBtn: document.getElementById('resetWalletBtn'),
+    declareIndiaBtn: document.getElementById('declareIndiaBtn'),
+    declareSLBtn: document.getElementById('declareSLBtn'),
+    disconnectBtn: document.getElementById('disconnectBtn'),
+    walletBalance: document.getElementById('walletBalance'),
+    walletLabel: document.getElementById('walletLabel'),
+    connectedAddr: document.getElementById('connectedAddr'),
+    connectWalletBtn: document.getElementById('connectWalletBtn'),
+    topupBtn: document.getElementById('topupBtn'),
+    historyBtn: document.getElementById('historyBtn'),
+    treasuryAddrTag: document.getElementById('treasuryAddrTag'),
+
+    poolTotalVal: document.getElementById('poolTotalVal'),
+    poolBarIndia: document.getElementById('poolBarIndia'),
+    poolBarSL: document.getElementById('poolBarSL'),
+    indiaMultiplier: document.getElementById('indiaMultiplier'),
+    slMultiplier: document.getElementById('slMultiplier'),
+    indiaUserPayout: document.getElementById('indiaUserPayout'),
+    slUserPayout: document.getElementById('slUserPayout'),
+    winnerBanner: document.getElementById('winnerBanner'),
+    winnerTitle: document.getElementById('winnerTitle'),
+    winnerDesc: document.getElementById('winnerDesc'),
+    claimPrizeBtn: document.getElementById('claimPrizeBtn'),
+
+    connectModalBackdrop: document.getElementById('connectModalBackdrop'),
+    connectModalClose: document.getElementById('connectModalClose'),
+    metamaskStatus: document.getElementById('metamaskStatus'),
+    metamaskBadge: document.getElementById('metamaskBadge'),
+
+    topupModalBackdrop: document.getElementById('topupModalBackdrop'),
+    topupModalClose: document.getElementById('topupModalClose'),
+    customAmountInput: document.getElementById('customAmountInput'),
+    txStatusBox: document.getElementById('txStatusBox'),
+    confirmTopupBtn: document.getElementById('confirmTopupBtn'),
+
+    historyModalBackdrop: document.getElementById('historyModalBackdrop'),
+    historyModalClose: document.getElementById('historyModalClose'),
+    historyList: document.getElementById('historyList'),
+  };
+
+  el.thresholdLabel.textContent = THRESHOLD;
+  el.treasuryAddrTag.textContent = truncateAddr(FLAG_CLASH_ADDRESS);
+
+  const spokesGroup = document.getElementById('spokesIndia');
+  for (let i = 0; i < 24; i++){
+    const angle = (i * 15) * Math.PI / 180;
+    const x2 = 450 + 78 * Math.cos(angle);
+    const y2 = 300 + 78 * Math.sin(angle);
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1', 450);
+    line.setAttribute('y1', 300);
+    line.setAttribute('x2', x2.toFixed(1));
+    line.setAttribute('y2', y2.toFixed(1));
+    spokesGroup.appendChild(line);
+  }
+
+  function truncateAddr(addr){
+    if(!addr) return 'Not Connected';
+    return addr.substring(0,6) + '...' + addr.substring(addr.length - 4);
+  }
+
+  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+
+  async function fetchStateFromChain() {
+      if (!flagClashContract || !connectedAccount) return;
+      try {
+          const state = await flagClashContract.getMatchState();
+          // state is: state, winner, sIndia, sSL, poolIndia, poolSL, claimed
+          matchWinner = state[0] === 1n ? (state[1] === 0n ? 'india' : 'sl') : null;
+          score.india = Number(state[2]);
+          score.sl = Number(state[3]);
+          payoutClaimed = state[6];
+
+          const backing = await flagClashContract.getUserBacking(connectedAccount);
+          userIndiaSpend = Number(ethers.formatUnits(backing[0], 6));
+          userSLSpend = Number(ethers.formatUnits(backing[1], 6));
+
+          const bal = await usdtContract.balanceOf(connectedAccount);
+          wallet = Number(ethers.formatUnits(bal, 6));
+
+          render();
+      } catch (err) {
+          console.error("Error fetching state:", err);
+      }
+  }
+
+  function render(){
+    el.countIndia.textContent = score.india;
+    el.countSL.textContent = score.sl;
+
+    el.sideIndia.classList.toggle('selected', selected === 'india');
+    el.sideSL.classList.toggle('selected', selected === 'sl');
+    el.flagIndia.classList.toggle('is-selected', selected === 'india');
+    el.flagSL.classList.toggle('is-selected', selected === 'sl');
+
+    const diff = score.india - score.sl;
+    el.sideIndia.classList.toggle('leading', diff > 0);
+    el.sideSL.classList.toggle('leading', diff < 0);
+
+    const diffClamped = clamp(diff, -THRESHOLD, THRESHOLD);
+    const opacityIndia = 0.5 + (diffClamped / THRESHOLD) * 0.5;
+    const opacitySL = 1 - opacityIndia;
+
+    el.flagIndia.style.opacity = opacityIndia.toFixed(3);
+    el.flagSL.style.opacity = opacitySL.toFixed(3);
+
+    if (diff >= 0){
+      el.flagIndia.style.zIndex = 2;
+      el.flagSL.style.zIndex = 1;
+    } else {
+      el.flagSL.style.zIndex = 2;
+      el.flagIndia.style.zIndex = 1;
+    }
+
+    const pull = clamp(diff / THRESHOLD, -1, 1);
+    el.seam.style.left = (50 - pull * 42) + '%';
+
+    if (matchWinner){
+      const winnerName = matchWinner === 'india' ? 'India' : 'Sri Lanka';
+      el.diffReadout.textContent = `${winnerName} WINS THE CLASH! Prize Pool Ready for Claim.`;
+    } else if (selected){
+      el.diffReadout.textContent = `Backing ${selected === 'india' ? 'India' : 'Sri Lanka'} — lead: ${diff > 0 ? '+' : ''}${diff} of ${THRESHOLD}`;
+    } else {
+      el.diffReadout.textContent = 'Pick a side to begin';
+    }
+
+    const totalIndiaPool = score.india * pointCost;
+    const totalSLPool = score.sl * pointCost;
+    const totalPool = totalIndiaPool + totalSLPool;
+    const netPrizePool = totalPool * (1 - (PLATFORM_FEE_PCT/100));
+
+    el.poolTotalVal.textContent = totalPool.toFixed(2) + ' USDT';
+    
+    let indiaRatio = totalPool > 0 ? (totalIndiaPool / totalPool) * 100 : 50;
+    let slRatio = totalPool > 0 ? (totalSLPool / totalPool) * 100 : 50;
+    el.poolBarIndia.style.width = indiaRatio.toFixed(1) + '%';
+    el.poolBarSL.style.width = slRatio.toFixed(1) + '%';
+
+    const indiaMult = totalIndiaPool > 0 ? (netPrizePool / totalIndiaPool) : 1.90;
+    const slMult = totalSLPool > 0 ? (netPrizePool / totalSLPool) : 1.90;
+    el.indiaMultiplier.textContent = indiaMult.toFixed(2) + 'x Win Odds';
+    el.slMultiplier.textContent = slMult.toFixed(2) + 'x Win Odds';
+
+    const userEstIndiaPayout = userIndiaSpend > 0 ? (userIndiaSpend * (totalIndiaPool > 0 ? netPrizePool / totalIndiaPool : 1)) : 0;
+    const userEstSLPayout = userSLSpend > 0 ? (userSLSpend * (totalSLPool > 0 ? netPrizePool / totalSLPool : 1)) : 0;
+    el.indiaUserPayout.textContent = `Your Est: ${userEstIndiaPayout.toFixed(2)} USDT`;
+    el.slUserPayout.textContent = `Your Est: ${userEstSLPayout.toFixed(2)} USDT`;
+
+    if (matchWinner) {
+      el.winnerBanner.style.display = 'block';
+      const winTeamName = matchWinner === 'india' ? 'India 🇮🇳' : 'Sri Lanka 🇱🇰';
+      el.winnerTitle.textContent = `🏆 ${winTeamName} Wins The Clash!`;
+      
+      const userWinningSpend = matchWinner === 'india' ? userIndiaSpend : userSLSpend;
+      const totalWinningPool = matchWinner === 'india' ? totalIndiaPool : totalSLPool;
+      const userSharePayout = totalWinningPool > 0 ? (userWinningSpend / totalWinningPool) * netPrizePool : 0;
+
+      if (payoutClaimed) {
+        el.winnerDesc.textContent = `✓ You have claimed your share of the prize pool (${userSharePayout.toFixed(2)} USDT)!`;
+        el.claimPrizeBtn.disabled = true;
+        el.claimPrizeBtn.textContent = 'Payout Claimed ✓';
+        el.claimPrizeBtn.style.background = 'rgba(255,255,255,0.15)';
+      } else if (userWinningSpend > 0) {
+        el.winnerDesc.textContent = `Congratulations! You backed the winning team with ${userWinningSpend.toFixed(2)} USDT. Your Prize Payout: +${userSharePayout.toFixed(2)} USDT!`;
+        el.claimPrizeBtn.disabled = false;
+        el.claimPrizeBtn.textContent = `Claim Payout (+${userSharePayout.toFixed(2)} USDT)`;
+        el.claimPrizeBtn.style.background = '';
+      } else {
+        el.winnerDesc.textContent = `You did not back ${winTeamName} in this match. Better luck next battle!`;
+        el.claimPrizeBtn.disabled = true;
+        el.claimPrizeBtn.textContent = 'No Winning Backing';
+        el.claimPrizeBtn.style.background = 'rgba(255,255,255,0.15)';
+      }
+    } else {
+      el.winnerBanner.style.display = 'none';
+    }
+
+    el.walletBalance.textContent = wallet.toFixed(2) + ' USDT';
+    el.walletBalance.classList.toggle('low', wallet < pointCost);
+
+    if (connectedAccount) {
+      el.walletLabel.textContent = 'MetaMask';
+      el.connectedAddr.textContent = truncateAddr(connectedAccount);
+      el.connectWalletBtn.textContent = 'Connected';
+      el.connectWalletBtn.style.background = 'rgba(16,185,129,0.2)';
+      el.connectWalletBtn.style.border = '1px solid rgba(16,185,129,0.4)';
+      el.connectWalletBtn.style.color = '#10b981';
+      el.disconnectBtn.style.display = 'inline-block';
+    } else {
+      el.walletLabel.textContent = 'Not Connected';
+      el.connectedAddr.textContent = 'Click to Connect';
+      el.connectWalletBtn.textContent = 'Connect Wallet';
+      el.connectWalletBtn.style.background = '';
+      el.connectWalletBtn.style.border = '';
+      el.connectWalletBtn.style.color = '';
+      el.disconnectBtn.style.display = 'none';
+    }
+
+    if (window.ethereum) {
+      el.metamaskStatus.textContent = 'Detected & ready';
+      el.metamaskBadge.textContent = 'Available';
+      el.metamaskBadge.style.background = 'rgba(16,185,129,0.15)';
+      el.metamaskBadge.style.color = 'var(--accent-green)';
+    }
+  }
+
+  function selectSide(side){
+    selected = side;
+    playTone(440, 'sine', 0.08, 0.04);
+    render();
+  }
+
+  function flashInsufficientFunds(){
+    playTone(200, 'sawtooth', 0.2, 0.08);
+    el.diffReadout.textContent = `Need ${pointCost.toFixed(2)} USDT per click — mint from faucet`;
+    el.topupBtn.classList.remove('pulse');
+    void el.topupBtn.offsetWidth;
+    el.topupBtn.classList.add('pulse');
+  }
+
+  async function scorePoint(){
+    if (!selected) return;
+    if (!connectedAccount) {
+        openConnectModal();
+        return;
+    }
+    if (wallet < pointCost){
+      flashInsufficientFunds();
+      return;
+    }
+    if (matchWinner) return;
+
+    try {
+        const amountWei = ethers.parseUnits(pointCost.toString(), 6);
+        const teamId = selected === 'india' ? 0 : 1;
+
+        // Check allowance
+        const allowance = await usdtContract.allowance(connectedAccount, FLAG_CLASH_ADDRESS);
+        if (allowance < amountWei) {
+            el.diffReadout.textContent = "Approving USDT for backing...";
+            const txApprove = await usdtContract.approve(FLAG_CLASH_ADDRESS, ethers.MaxUint256);
+            await txApprove.wait();
+        }
+
+        el.diffReadout.textContent = "Backing team on-chain...";
+        const tx = await flagClashContract.backTeam(teamId, amountWei);
+        await tx.wait();
+
+        // Let the event listener update the score, but we can do optimisitic UI
+        playTone(600 + (score[selected] * 15), 'sine', 0.06, 0.03);
+        const activeFlag = selected === 'india' ? el.flagIndia : el.flagSL;
+        activeFlag.classList.remove('click-bounce');
+        void activeFlag.offsetWidth;
+        activeFlag.classList.add('click-bounce');
+
+        transactions.unshift({
+          id: tx.hash,
+          type: 'spend',
+          amount: pointCost,
+          side: selected === 'india' ? 'India' : 'Sri Lanka',
+          timestamp: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})
+        });
+        if (transactions.length > 50) transactions.pop();
+
+        await fetchStateFromChain();
+    } catch (err) {
+        console.error(err);
+        el.diffReadout.textContent = "Transaction failed or rejected.";
+    }
+  }
+
+  async function claimPayout(){
+    if (!matchWinner || payoutClaimed || !connectedAccount) return;
+    
+    try {
+        el.claimPrizeBtn.disabled = true;
+        el.claimPrizeBtn.textContent = "Claiming...";
+        const tx = await flagClashContract.claimPrize();
+        await tx.wait();
+
+        playTone(1000, 'triangle', 0.4, 0.1);
+        
+        // Let state fetch handle the UI update
+        await fetchStateFromChain();
+        
+        transactions.unshift({
+          id: tx.hash,
+          type: 'payout',
+          amount: 0, // Not easily available without parsing event
+          team: matchWinner === 'india' ? 'India' : 'Sri Lanka',
+          timestamp: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+        });
+    } catch (err) {
+        console.error(err);
+        el.claimPrizeBtn.disabled = false;
+        el.claimPrizeBtn.textContent = "Claim Failed";
+    }
+  }
+
+  el.treasuryAddrTag.addEventListener('click', (e) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(FLAG_CLASH_ADDRESS);
+  });
+
+  el.connectedAddr.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (connectedAccount) {
+      navigator.clipboard.writeText(connectedAccount);
+    } else {
+      openConnectModal();
+    }
+  });
+
+  function openConnectModal(){
+    el.connectModalBackdrop.classList.add('open');
+  }
+  function closeConnectModal(){
+    el.connectModalBackdrop.classList.remove('open');
+  }
+
+  async function connectWallet(providerType){
+    if (providerType === 'metamask' && window.ethereum) {
+      try {
+        provider = new ethers.BrowserProvider(window.ethereum);
+        
+        // Ensure Base Sepolia
+        const network = await provider.getNetwork();
+        if (network.chainId !== 84532n) {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: '0x14a34' }],
+                });
+            } catch (switchError) {
+                if (switchError.code === 4902) {
+                    await window.ethereum.request({
+                        method: 'wallet_addEthereumChain',
+                        params: [{
+                            chainId: '0x14a34',
+                            chainName: 'Base Sepolia',
+                            rpcUrls: ['https://sepolia.base.org'],
+                            nativeCurrency: { name: 'ETH', symbol: 'ETH', decimals: 18 },
+                            blockExplorerUrls: ['https://sepolia.basescan.org/']
+                        }],
+                    });
+                }
+            }
+            provider = new ethers.BrowserProvider(window.ethereum);
+        }
+
+        signer = await provider.getSigner();
+        connectedAccount = await signer.getAddress();
+        
+        usdtContract = new ethers.Contract(USDT_ADDRESS, usdtAbi, signer);
+        flagClashContract = new ethers.Contract(FLAG_CLASH_ADDRESS, flagClashAbi, signer);
+        
+        try {
+            const pc = await flagClashContract.POINT_COST();
+            pointCost = Number(ethers.formatUnits(pc, 6));
+        } catch(e){}
+
+        await fetchStateFromChain();
+
+        // Listen for events
+        flagClashContract.on("TeamBacked", (user, team, amount, pointsScored) => {
+            fetchStateFromChain();
+        });
+        flagClashContract.on("WinnerDeclared", (winningTeam) => {
+            fetchStateFromChain();
+            playTone(900, 'sine', 0.4, 0.1);
+        });
+
+      } catch(err) {
+        console.error('Connection error:', err);
+      }
+    }
+    closeConnectModal();
+    render();
+  }
+
+  function disconnectWallet(){
+    connectedAccount = null;
+    provider = null;
+    signer = null;
+    if (flagClashContract) flagClashContract.removeAllListeners();
+    flagClashContract = null;
+    usdtContract = null;
+    render();
+  }
+
+  function openTopupModal(){
+    isPendingTx = false;
+    el.customAmountInput.value = '1000';
+    setTxStatus(`Mint up to 1000 Test USDT.`);
+    el.confirmTopupBtn.disabled = false;
+    el.topupModalClose.disabled = false;
+    el.topupModalBackdrop.classList.add('open');
+  }
+
+  function closeTopupModal(){
+    if (isPendingTx) return;
+    el.topupModalBackdrop.classList.remove('open');
+  }
+
+  function setTxStatus(msg, isSpinner = false, txHash = null){
+    if (isSpinner) {
+      el.txStatusBox.innerHTML = `<div class="tx-spinner"></div><div>${msg}</div>`;
+    } else if (txHash) {
+      el.txStatusBox.innerHTML = `<div>${msg}</div><a class="tx-hash-link" href="https://sepolia.basescan.org/tx/${txHash}" target="_blank" rel="noopener">Tx Hash: ${txHash.substring(0,18)}...</a>`;
+    } else {
+      el.txStatusBox.innerHTML = `<div>${msg}</div>`;
+    }
+  }
+
+  async function processTopup(){
+    const customVal = parseFloat(el.customAmountInput.value);
+    const amt = (!isNaN(customVal) && customVal > 0) ? customVal : 1000;
+    if (amt <= 0 || isPendingTx) return;
+
+    if (!connectedAccount) {
+      openConnectModal();
+      return;
+    }
+
+    isPendingTx = true;
+    el.confirmTopupBtn.disabled = true;
+    el.topupModalClose.disabled = true;
+
+    setTxStatus(`Awaiting approval to mint ${amt} USDT...`, true);
+
+    try {
+        const tx = await usdtContract.faucet(ethers.parseUnits(amt.toString(), 6));
+        setTxStatus(`Minting on-chain...`, true, tx.hash);
+        await tx.wait();
+        
+        setTxStatus(`✓ USDT Minted Successfully!`, false, tx.hash);
+        playTone(880, 'triangle', 0.25, 0.08);
+
+        transactions.unshift({
+          id: tx.hash,
+          type: 'topup',
+          amount: amt,
+          txHash: tx.hash,
+          timestamp: new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})
+        });
+        if (transactions.length > 50) transactions.pop();
+
+        await fetchStateFromChain();
+        
+        setTimeout(() => {
+          isPendingTx = false;
+          closeTopupModal();
+        }, 1200);
+
+    } catch(err) {
+        console.error(err);
+        setTxStatus(`Minting failed.`);
+        isPendingTx = false;
+        el.confirmTopupBtn.disabled = false;
+        el.topupModalClose.disabled = false;
+    }
+  }
+
+  function openHistoryModal(){
+    renderHistory();
+    el.historyModalBackdrop.classList.add('open');
+  }
+  function closeHistoryModal(){
+    el.historyModalBackdrop.classList.remove('open');
+  }
+
+  function renderHistory(){
+    if (transactions.length === 0) {
+      el.historyList.innerHTML = '<div style="text-align:center; color:var(--ink-2); font-size:12px; padding:20px;">No transactions recorded yet.</div>';
+      return;
+    }
+
+    el.historyList.innerHTML = transactions.map(item => {
+      if (item.type === 'topup') {
+        return `
+          <div class="history-item topup">
+            <div class="history-meta">
+              <span class="history-title">Minted Test USDT</span>
+              <span class="history-time">${item.timestamp} &middot; <a href="https://sepolia.basescan.org/tx/${item.txHash}" target="_blank" class="tx-hash-link">Tx: ${item.txHash.substring(0,10)}...</a></span>
+            </div>
+            <span class="amt">+${item.amount.toFixed(2)} USDT</span>
+          </div>
+        `;
+      } else if (item.type === 'payout') {
+        return `
+          <div class="history-item payout">
+            <div class="history-meta">
+              <span class="history-title">🏆 Prize Claimed (${item.team})</span>
+              <span class="history-time">${item.timestamp}</span>
+            </div>
+            <span class="amt">Claimed</span>
+          </div>
+        `;
+      } else {
+        return `
+          <div class="history-item spend">
+            <div class="history-meta">
+              <span class="history-title">Backed ${item.side} (1 Point)</span>
+              <span class="history-time">${item.timestamp}</span>
+            </div>
+            <span class="amt">-${item.amount.toFixed(2)} USDT</span>
+          </div>
+        `;
+      }
+    }).join('');
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Numpad1' || e.key === '1'){ selectSide('india'); }
+    else if (e.code === 'Numpad2' || e.key === '2'){ selectSide('sl'); }
+  });
+
+  el.flagIndia.addEventListener('click', (e) => { e.stopPropagation(); selectSide('india'); });
+  el.flagSL.addEventListener('click', (e) => { e.stopPropagation(); selectSide('sl'); });
+  el.sideIndia.addEventListener('click', (e) => { e.stopPropagation(); selectSide('india'); });
+  el.sideSL.addEventListener('click', (e) => { e.stopPropagation(); selectSide('sl'); });
+
+  document.getElementById('clickZone').addEventListener('click', scorePoint);
+  document.getElementById('topNav').addEventListener('click', (e) => e.stopPropagation());
+  document.getElementById('poolDashboard').addEventListener('click', (e) => e.stopPropagation());
+  document.getElementById('winnerBanner').addEventListener('click', (e) => e.stopPropagation());
+
+  el.claimPrizeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    claimPayout();
+  });
+
+  el.resetBtn.style.display = 'none';
+  el.resetWalletBtn.style.display = 'none';
+  
+  el.declareIndiaBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if(flagClashContract) await flagClashContract.declareWinner(0);
+  });
+  el.declareSLBtn.addEventListener('click', async (e) => {
+    e.stopPropagation();
+    if(flagClashContract) await flagClashContract.declareWinner(1);
+  });
+  el.disconnectBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    disconnectWallet();
+  });
+
+  el.connectWalletBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openConnectModal();
+  });
+  el.connectModalClose.addEventListener('click', (e) => { e.stopPropagation(); closeConnectModal(); });
+  el.connectModalBackdrop.addEventListener('click', (e) => { if (e.target === el.connectModalBackdrop) closeConnectModal(); });
+
+  document.querySelectorAll('.wallet-opt').forEach(opt => {
+    opt.addEventListener('click', (e) => {
+      e.stopPropagation();
+      connectWallet(opt.dataset.wallet);
+    });
+  });
+
+  el.topupBtn.addEventListener('click', (e) => { e.stopPropagation(); openTopupModal(); });
+  el.topupModalClose.addEventListener('click', (e) => { e.stopPropagation(); closeTopupModal(); });
+  el.topupModalBackdrop.addEventListener('click', (e) => { if (e.target === el.topupModalBackdrop) closeTopupModal(); });
+
+  el.confirmTopupBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    processTopup();
+  });
+
+  el.historyBtn.addEventListener('click', (e) => { e.stopPropagation(); openHistoryModal(); });
+  el.historyModalClose.addEventListener('click', (e) => { e.stopPropagation(); closeHistoryModal(); });
+  el.historyModalBackdrop.addEventListener('click', (e) => { if (e.target === el.historyModalBackdrop) closeHistoryModal(); });
+
+  render();
+})();
+
+</script>
+
+</body>
+</html>
