@@ -4,41 +4,64 @@ pragma solidity ^0.8.24;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
 
-contract FlagClash is Ownable, ReentrancyGuard {
+contract FlagClash is Ownable, ReentrancyGuard, Pausable {
     IERC20 public usdt;
 
     uint256 public constant POINT_COST = 100_000; // 0.1 USDT (6 decimals)
     uint256 public constant PLATFORM_FEE_PCT = 5;
 
     enum MatchState { OPEN, RESOLVED }
-    MatchState public currentState;
-    uint8 public winningTeam; // 0 for India, 1 for Sri Lanka (valid only if RESOLVED)
 
-    uint256 public scoreIndia;
-    uint256 public scoreSL;
+    struct Match {
+        MatchState state;
+        uint8 winningTeam; // 0 for India, 1 for Sri Lanka (valid only if RESOLVED)
+        uint256 scoreIndia;
+        uint256 scoreSL;
+        uint256 totalPoolIndia;
+        uint256 totalPoolSL;
+    }
 
-    uint256 public totalPoolIndia;
-    uint256 public totalPoolSL;
+    uint256 public currentMatchId;
+    mapping(uint256 => Match) public matches;
 
-    // Track user backings: mapping(user => mapping(team => amount))
-    mapping(address => mapping(uint8 => uint256)) public userBacking;
+    // Track user backings: mapping(matchId => mapping(user => mapping(team => amount)))
+    mapping(uint256 => mapping(address => mapping(uint8 => uint256))) public userBacking;
     
-    // Track if a user has claimed their prize
-    mapping(address => bool) public hasClaimed;
+    // Track if a user has claimed their prize: mapping(matchId => mapping(user => bool))
+    mapping(uint256 => mapping(address => bool)) public hasClaimed;
 
-    event TeamBacked(address indexed user, uint8 team, uint256 amount, uint256 pointsScored);
-    event WinnerDeclared(uint8 winningTeam, uint256 totalPool, uint256 netPrizePool);
-    event PrizeClaimed(address indexed user, uint256 amount);
-    event MatchReset();
+    event MatchStarted(uint256 indexed matchId);
+    event TeamBacked(uint256 indexed matchId, address indexed user, uint8 team, uint256 amount, uint256 pointsScored);
+    event WinnerDeclared(uint256 indexed matchId, uint8 winningTeam, uint256 totalPool, uint256 netPrizePool);
+    event PrizeClaimed(uint256 indexed matchId, address indexed user, uint256 amount);
 
     constructor(address _usdtAddress) Ownable(msg.sender) {
         usdt = IERC20(_usdtAddress);
-        currentState = MatchState.OPEN;
+        startNewMatch();
     }
 
-    function backTeam(uint8 team, uint256 amount) external nonReentrant {
-        require(currentState == MatchState.OPEN, "Match is not open");
+    function startNewMatch() public onlyOwner {
+        if (currentMatchId > 0) {
+            require(matches[currentMatchId].state == MatchState.RESOLVED, "Current match must be resolved to start a new one");
+        }
+        currentMatchId++;
+        matches[currentMatchId] = Match({
+            state: MatchState.OPEN,
+            winningTeam: 0,
+            scoreIndia: 0,
+            scoreSL: 0,
+            totalPoolIndia: 0,
+            totalPoolSL: 0
+        });
+        emit MatchStarted(currentMatchId);
+    }
+
+    function backTeam(uint256 matchId, uint8 team, uint256 amount) external nonReentrant whenNotPaused {
+        require(matchId == currentMatchId, "Can only back the current match");
+        Match storage currentMatch = matches[matchId];
+        require(currentMatch.state == MatchState.OPEN, "Match is not open");
         require(team == 0 || team == 1, "Invalid team. 0 = India, 1 = Sri Lanka");
         require(amount >= POINT_COST, "Minimum backing is 0.1 USDT");
         require(amount % POINT_COST == 0, "Amount must be multiple of 0.1 USDT");
@@ -49,26 +72,27 @@ contract FlagClash is Ownable, ReentrancyGuard {
         uint256 points = amount / POINT_COST;
 
         if (team == 0) {
-            scoreIndia += points;
-            totalPoolIndia += amount;
+            currentMatch.scoreIndia += points;
+            currentMatch.totalPoolIndia += amount;
         } else {
-            scoreSL += points;
-            totalPoolSL += amount;
+            currentMatch.scoreSL += points;
+            currentMatch.totalPoolSL += amount;
         }
 
-        userBacking[msg.sender][team] += amount;
+        userBacking[matchId][msg.sender][team] += amount;
 
-        emit TeamBacked(msg.sender, team, amount, points);
+        emit TeamBacked(matchId, msg.sender, team, amount, points);
     }
 
-    function declareWinner(uint8 team) external onlyOwner {
-        require(currentState == MatchState.OPEN, "Match is already resolved");
+    function declareWinner(uint256 matchId, uint8 team) external onlyOwner {
+        Match storage currentMatch = matches[matchId];
+        require(currentMatch.state == MatchState.OPEN, "Match is already resolved");
         require(team == 0 || team == 1, "Invalid team");
 
-        winningTeam = team;
-        currentState = MatchState.RESOLVED;
+        currentMatch.winningTeam = team;
+        currentMatch.state = MatchState.RESOLVED;
 
-        uint256 totalPool = totalPoolIndia + totalPoolSL;
+        uint256 totalPool = currentMatch.totalPoolIndia + currentMatch.totalPoolSL;
         uint256 platformFee = (totalPool * PLATFORM_FEE_PCT) / 100;
         uint256 netPrizePool = totalPool - platformFee;
 
@@ -77,47 +101,33 @@ contract FlagClash is Ownable, ReentrancyGuard {
             require(usdt.transfer(owner(), platformFee), "Fee transfer failed");
         }
 
-        emit WinnerDeclared(winningTeam, totalPool, netPrizePool);
+        emit WinnerDeclared(matchId, currentMatch.winningTeam, totalPool, netPrizePool);
     }
 
-    function claimPrize() external nonReentrant {
-        require(currentState == MatchState.RESOLVED, "Match not yet resolved");
-        require(!hasClaimed[msg.sender], "Prize already claimed");
+    function claimPrize(uint256 matchId) external nonReentrant whenNotPaused {
+        Match storage targetMatch = matches[matchId];
+        require(targetMatch.state == MatchState.RESOLVED, "Match not yet resolved");
+        require(!hasClaimed[matchId][msg.sender], "Prize already claimed");
 
-        uint256 userSpend = userBacking[msg.sender][winningTeam];
+        uint256 userSpend = userBacking[matchId][msg.sender][targetMatch.winningTeam];
         require(userSpend > 0, "No winning backing");
 
-        uint256 winningPool = (winningTeam == 0) ? totalPoolIndia : totalPoolSL;
+        uint256 winningPool = (targetMatch.winningTeam == 0) ? targetMatch.totalPoolIndia : targetMatch.totalPoolSL;
         
-        uint256 totalPool = totalPoolIndia + totalPoolSL;
+        uint256 totalPool = targetMatch.totalPoolIndia + targetMatch.totalPoolSL;
         uint256 netPrizePool = totalPool - ((totalPool * PLATFORM_FEE_PCT) / 100);
 
         // Calculate proportional share
         uint256 userShare = (userSpend * netPrizePool) / winningPool;
 
-        hasClaimed[msg.sender] = true;
+        hasClaimed[matchId][msg.sender] = true;
 
         require(usdt.transfer(msg.sender, userShare), "Payout transfer failed");
 
-        emit PrizeClaimed(msg.sender, userShare);
+        emit PrizeClaimed(matchId, msg.sender, userShare);
     }
 
-    function resetMatch() external onlyOwner {
-        require(currentState == MatchState.RESOLVED, "Match must be resolved to reset");
-        
-        currentState = MatchState.OPEN;
-        scoreIndia = 0;
-        scoreSL = 0;
-        totalPoolIndia = 0;
-        totalPoolSL = 0;
-        // Note: we don't clear the mappings. In a real production app, it's better to 
-        // use an active match ID, so users can still claim from past matches.
-        // For simplicity in this demo, resetMatch should really only be called after claims.
-
-        emit MatchReset();
-    }
-
-    function getMatchState() external view returns (
+    function getMatchState(uint256 matchId) external view returns (
         MatchState state,
         uint8 winner,
         uint256 sIndia,
@@ -126,18 +136,28 @@ contract FlagClash is Ownable, ReentrancyGuard {
         uint256 poolSL,
         bool claimed
     ) {
+        Match memory m = matches[matchId];
         return (
-            currentState,
-            winningTeam,
-            scoreIndia,
-            scoreSL,
-            totalPoolIndia,
-            totalPoolSL,
-            hasClaimed[msg.sender]
+            m.state,
+            m.winningTeam,
+            m.scoreIndia,
+            m.scoreSL,
+            m.totalPoolIndia,
+            m.totalPoolSL,
+            hasClaimed[matchId][msg.sender]
         );
     }
 
-    function getUserBacking(address user) external view returns (uint256 indiaBacking, uint256 slBacking) {
-        return (userBacking[user][0], userBacking[user][1]);
+    function getUserBacking(uint256 matchId, address user) external view returns (uint256 indiaBacking, uint256 slBacking) {
+        return (userBacking[matchId][user][0], userBacking[matchId][user][1]);
+    }
+
+    // Pausable controls
+    function pause() external onlyOwner {
+        _pause();
+    }
+
+    function unpause() external onlyOwner {
+        _unpause();
     }
 }
